@@ -1,3 +1,76 @@
+.login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #020817 0%, #0f172a 38%, #1d4ed8 100%);
+  padding: 24px;
+}
+
+.login-card {
+  width: min(100%, 440px);
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 24px;
+  padding: 32px 28px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.45);
+}
+
+.login-branding {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.login-branding h1 {
+  margin: 10px 0 0;
+  color: #f8fafc;
+  font-size: clamp(2rem, 4vw, 2.5rem);
+}
+
+.login-form {
+  display: grid;
+  gap: 18px;
+}
+
+.login-form label {
+  display: grid;
+  gap: 8px;
+  color: #dbeafe;
+  font-weight: 600;
+}
+
+.login-form input {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 1rem;
+}
+
+.login-form input:focus {
+  outline: 2px solid rgba(96, 165, 250, 0.8);
+  outline-offset: 1px;
+}
+
+.login-button {
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+  color: white;
+  padding: 14px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.login-demo-note {
+  color: #bfdbfe;
+  font-size: 0.82rem;
+  text-align: center;
+  line-height: 1.5;
+}
+
 .app-shell {
   min-height: 100vh;
   display: flex;

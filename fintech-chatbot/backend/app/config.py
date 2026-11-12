@@ -32,12 +32,17 @@ class Settings:
     BACKEND_HOST: str = os.getenv("BACKEND_HOST", "0.0.0.0")
     BACKEND_PORT: int = int(os.getenv("BACKEND_PORT", "8000"))
     FRONTEND_BASE_URL: str = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173")
-    PAYPAL_CLIENT_ID: str = "BAAqVxEhZ5fB4Vs9Tfpk90QH9hFA9fK4UqmF1em5dysIyzQ3oCCXxLI4"
-    PAYPAL_CLIENT_SECRET: str = "EP2h4OvvEurLnkZ6TBeSnIUznInm1lw_WNsEQ4u-DCSMIoTxgCZd5L5T_SXl35ZZkHVbvx2ugyc6IoAu"
-    PAYPAL_MODE: str = "sandbox"
-    PAYPAL_BASE_URL: str = PAYPAL_SANDBOX_API
-    PAYPAL_WEBHOOK_ID: str = ""
-    PAYPAL_RECEIVER_EMAIL: str = "sb-n43onp53750614@personal.example.com"
+    PAYPAL_CLIENT_ID: str = _clean_env(os.getenv("PAYPAL_CLIENT_ID"))
+    PAYPAL_CLIENT_SECRET: str = _clean_env(os.getenv("PAYPAL_CLIENT_SECRET"))
+    PAYPAL_MODE: str = _clean_env(os.getenv("PAYPAL_MODE"), "sandbox").lower()
+    PAYPAL_BASE_URL: str = PAYPAL_SANDBOX_API if PAYPAL_MODE == "sandbox" else PAYPAL_LIVE_API
+    PAYPAL_WEBHOOK_ID: str = _clean_env(os.getenv("PAYPAL_WEBHOOK_ID"))
+    PAYPAL_RECEIVER_EMAIL: str = _clean_env(
+        os.getenv("PAYPAL_RECEIVER_EMAIL")
+        or os.getenv("PAYPAL_MENTOR_EMAIL")
+        or os.getenv("PAYPAL_RECIPIENT_EMAIL")
+        or "deepsbiswa@yahoo.com"
+    )
     PAYPAL_OWNER_TOKEN: str = os.getenv("PAYPAL_OWNER_TOKEN", "").strip()
     PAYPAL_BUSINESS_COUNTRY: str = os.getenv("PAYPAL_BUSINESS_COUNTRY", "").strip().upper()
     PAYPAL_LIVE_PAYOUTS_ENABLED: bool = str(os.getenv("PAYPAL_LIVE_PAYOUTS_ENABLED", "false")).strip().lower() == "true"
@@ -53,8 +58,8 @@ class Settings:
         "CORS_ORIGIN_REGEX",
         r"https?://([A-Za-z0-9-]+\.)*(localhost|127\.0\.0\.1|0\.0\.0\.0|daytona\.[A-Za-z0-9.-]+)(:\d+)?",
     )
-    DASHBOARD_USERNAME: str = os.getenv("DASHBOARD_USERNAME", "pannanum").strip() or "pannanum"
-    DASHBOARD_PASSWORD: str = os.getenv("DASHBOARD_PASSWORD", "pannanum").strip() or "pannanum"
+    DASHBOARD_USERNAME: str = os.getenv("DASHBOARD_USERNAME", "admin").strip() or "admin"
+    DASHBOARD_PASSWORD: str = os.getenv("DASHBOARD_PASSWORD", "admin123").strip() or "admin123"
 
     def paypal_credentials_configured(self) -> bool:
         return bool(self.PAYPAL_CLIENT_ID and self.PAYPAL_CLIENT_SECRET)

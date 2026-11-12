@@ -45,7 +45,67 @@ function ChartPanel({ chart }) {
   );
 }
 
+function LoginPage({ form, setForm, onSubmit, error }) {
+  return (
+    <div className="login-shell">
+      <div className="login-card">
+        <div className="login-branding">
+          <p className="eyebrow">Welcome back</p>
+          <h1>Eazily Done</h1>
+        </div>
+
+        <form className="login-form" onSubmit={onSubmit}>
+          <label>
+            Username
+            <input
+              type="text"
+              value={form.username}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  username: event.target.value,
+                }))
+              }
+              placeholder="admin"
+              autoComplete="username"
+              required
+            />
+          </label>
+
+          <label>
+            Password
+            <input
+              type="password"
+              value={form.password}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  password: event.target.value,
+                }))
+              }
+              placeholder="Enter your password"
+              autoComplete="current-password"
+              required
+            />
+          </label>
+
+          {error && <div className="error-banner">{error}</div>}
+
+          <button type="submit" className="login-button">
+            Sign in
+          </button>
+
+          <div className="login-demo-note">
+            Demo access: use username admin and password admin123.
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function PaymentPage() {
+  const [recipientEmail, setRecipientEmail] = useState("deepsbiswa@yahoo.com");
   const [amount, setAmount] = useState("1.00");
   const [currency, setCurrency] = useState("USD");
   const [status, setStatus] = useState("");
@@ -179,7 +239,16 @@ function PaymentPage() {
       </div>
 
       <form className="payment-form" onSubmit={handleSubmit}>
-        <div className="recipient-banner">Recipient: deepsbiswa@yahoo.com</div>
+        <label>
+          Recipient email
+          <input
+            type="email"
+            value={recipientEmail}
+            onChange={(event) => setRecipientEmail(event.target.value)}
+            placeholder="name@example.com"
+          />
+        </label>
+
         <label>
           Amount
           <input
@@ -346,7 +415,6 @@ function PayPalReportingPanel({
   );
 }
 
-<<<<<<< HEAD
 function PayoutPanel({ accountDetails }) {
   const [recipientEmail, setRecipientEmail] = useState("friend@example.com");
   const [amount, setAmount] = useState("1.00");
@@ -480,8 +548,6 @@ function PayoutPanel({ accountDetails }) {
   );
 }
 
-=======
->>>>>>> bc5b4f9292e0303e5b8168d5df279fcf74c6f01f
 function DashboardPanel({
   dashboard,
   isLoading,
@@ -492,6 +558,13 @@ function DashboardPanel({
   paypalError,
   onRefreshPayPalData,
 }) {
+  const fallbackBalance = Number(dashboard?.account?.balance || 5000);
+  const sandboxBalance =
+    paypalBalance?.balances?.find((balance) => balance.is_primary)
+      ?.available_balance ??
+    paypalBalance?.balances?.[0]?.available_balance ??
+    fallbackBalance;
+
   if (isLoading) {
     return (
       <div className="dashboard-panel">
@@ -534,10 +607,13 @@ function DashboardPanel({
           <span>Account balance</span>
           <strong>
             {account.currency}{" "}
-            {Number(summary.balance || 0).toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            {Number(sandboxBalance || summary.balance || 0).toLocaleString(
+              undefined,
+              {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              },
+            )}
           </strong>
         </div>
         <div className="summary-card">
@@ -675,11 +751,8 @@ function DashboardPanel({
         }
       />
 
-<<<<<<< HEAD
       <PayoutPanel accountDetails={paypalBalance} />
 
-=======
->>>>>>> bc5b4f9292e0303e5b8168d5df279fcf74c6f01f
       {error && <div className="error-banner">{error}</div>}
     </div>
   );
@@ -707,6 +780,9 @@ function App() {
   const [error, setError] = useState("");
   const [suggestions, setSuggestions] = useState(DEFAULT_SUGGESTIONS);
   const [view, setView] = useState("dashboard");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [loginError, setLoginError] = useState("");
   const endOfMessagesRef = useRef(null);
 
   useEffect(() => {
@@ -854,6 +930,40 @@ function App() {
     setError("");
   };
 
+  const handleLogin = (event) => {
+    event.preventDefault();
+
+    const enteredUsername = loginForm.username.trim();
+    const enteredPassword = loginForm.password;
+
+    if (!enteredUsername || !enteredPassword) {
+      setLoginError("Please enter both username and password.");
+      return;
+    }
+
+    if (
+      enteredUsername.toLowerCase() !== "admin" ||
+      enteredPassword !== "admin123"
+    ) {
+      setLoginError("Incorrect username or password.");
+      return;
+    }
+
+    setLoginError("");
+    setIsLoggedIn(true);
+  };
+
+  if (!isLoggedIn) {
+    return (
+      <LoginPage
+        form={loginForm}
+        setForm={setLoginForm}
+        onSubmit={handleLogin}
+        error={loginError}
+      />
+    );
+  }
+
   return (
     <div className="app-shell">
       <div className="chat-card">
@@ -883,6 +993,13 @@ function App() {
               type="button"
             >
               Payment
+            </button>
+            <button
+              className="nav-btn"
+              onClick={() => setIsLoggedIn(false)}
+              type="button"
+            >
+              Logout
             </button>
             {view === "chat" && (
               <button className="clear-btn" onClick={clearChat} type="button">
