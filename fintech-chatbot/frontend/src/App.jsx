@@ -173,6 +173,7 @@ function PaymentPage() {
           amount,
           currency,
           description: "Fintech service payment",
+          recipient_email: recipientEmail,
         }),
       });
 

@@ -251,7 +251,7 @@ def get_paypal_access_token() -> str | None:
     return token
 
 
-def create_paypal_checkout_order(amount: float, currency: str, description: str | None) -> dict:
+def create_paypal_checkout_order(amount: float, currency: str, description: str | None, recipient_email: str | None = None) -> dict:
     token = get_paypal_access_token()
     if not token:
         raise HTTPException(
@@ -262,7 +262,9 @@ def create_paypal_checkout_order(amount: float, currency: str, description: str 
             ),
         )
 
-    payee_email = settings.PAYPAL_RECEIVER_EMAIL or "deepsbiswa@yahoo.com"
+    payee_email = (recipient_email or settings.PAYPAL_RECEIVER_EMAIL or "deepsbiswa@yahoo.com").strip()
+    if not payee_email or "@" not in payee_email:
+        raise HTTPException(status_code=400, detail="A valid PayPal recipient email is required for checkout order creation.")
     frontend_base = settings.FRONTEND_BASE_URL.rstrip("/")
     payload = {
         "intent": "CAPTURE",
@@ -1133,7 +1135,12 @@ def create_payment_order(payload: PaymentRequest):
         )
 
     try:
-        paypal_data = create_paypal_checkout_order(amount, currency, payload.description)
+        paypal_data = create_paypal_checkout_order(
+            amount,
+            currency,
+            payload.description,
+            recipient_email=(payload.recipient_email or "").strip() or None,
+        )
         approval_url = next(
             (link["href"] for link in paypal_data.get("links", []) if link.get("rel") == "approve"),
             None,

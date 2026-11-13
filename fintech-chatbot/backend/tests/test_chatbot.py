@@ -183,6 +183,50 @@ class ChatbotChartTests(unittest.TestCase):
                 delattr(settings, "PAYPAL_RECEIVER_EMAIL")
 
     @patch.object(settings, "reload_paypal")
+    @patch("app.main.httpx.post")
+    def test_create_payment_order_uses_explicit_recipient_email_when_provided(self, mock_post, _reload):
+        original_client_id = settings.PAYPAL_CLIENT_ID
+        original_client_secret = settings.PAYPAL_CLIENT_SECRET
+        original_recipient = getattr(settings, "PAYPAL_RECEIVER_EMAIL", "")
+        settings.PAYPAL_CLIENT_ID = "test-client-id"
+        settings.PAYPAL_CLIENT_SECRET = "test-client-secret"
+        settings.PAYPAL_RECEIVER_EMAIL = "default@example.com"
+
+        try:
+            mock_post.side_effect = [
+                type(
+                    "MockResponse",
+                    (),
+                    {"status_code": 200, "json": lambda self: {"access_token": "demo-token"}},
+                )(),
+                type(
+                    "MockResponse",
+                    (),
+                    {
+                        "status_code": 200,
+                        "json": lambda self: {
+                            "id": "PAYPAL-ORDER-RECIPIENT",
+                            "status": "CREATED",
+                            "links": [{"rel": "approve", "href": "https://paypal.example/approve"}],
+                        },
+                    },
+                )(),
+            ]
+
+            response = create_payment_order(
+                PaymentRequest(amount="25.00", currency="USD", recipient_email="mentor@example.com")
+            )
+            self.assertEqual(response.order_id, "PAYPAL-ORDER-RECIPIENT")
+            self.assertEqual(mock_post.call_args_list[1].kwargs["json"]["purchase_units"][0]["payee"]["email_address"], "mentor@example.com")
+        finally:
+            settings.PAYPAL_CLIENT_ID = original_client_id
+            settings.PAYPAL_CLIENT_SECRET = original_client_secret
+            if original_recipient:
+                settings.PAYPAL_RECEIVER_EMAIL = original_recipient
+            else:
+                delattr(settings, "PAYPAL_RECEIVER_EMAIL")
+
+    @patch.object(settings, "reload_paypal")
     @patch("app.main.httpx.get")
     @patch("app.main.httpx.post")
     def test_get_payment_status_returns_order_status(self, mock_post, mock_get, _reload):

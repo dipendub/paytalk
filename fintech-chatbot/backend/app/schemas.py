@@ -43,6 +43,7 @@ class PaymentRequest(BaseModel):
     amount: str | float = Field(..., description="Payment amount")
     currency: str = Field("USD", min_length=3, max_length=3)
     description: str | None = None
+    recipient_email: str | None = Field(default=None, description="Override the configured PayPal recipient email")
 
 
 class PaymentOrderResponse(BaseModel):
