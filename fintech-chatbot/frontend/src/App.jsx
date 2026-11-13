@@ -96,7 +96,7 @@ function LoginPage({ form, setForm, onSubmit, error }) {
           </button>
 
           <div className="login-demo-note">
-            Demo access: use username admin and password admin123.
+            Sign in with the dashboard credentials from backend/.env, or the default admin/admin123 values.
           </div>
         </form>
       </div>
@@ -789,6 +789,22 @@ function App() {
     endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading, view]);
 
+  useEffect(() => {
+    try {
+      const savedSession = localStorage.getItem("eazilyDoneAuth");
+      if (!savedSession) {
+        return;
+      }
+
+      const parsedSession = JSON.parse(savedSession);
+      if (parsedSession?.username) {
+        setIsLoggedIn(true);
+      }
+    } catch (error) {
+      console.warn("Unable to restore login state.", error);
+    }
+  }, []);
+
   const loadPaypalReporting = async () => {
     setPaypalLoading(true);
     setPaypalError("");
@@ -930,7 +946,7 @@ function App() {
     setError("");
   };
 
-  const handleLogin = (event) => {
+  const handleLogin = async (event) => {
     event.preventDefault();
 
     const enteredUsername = loginForm.username.trim();
@@ -941,16 +957,37 @@ function App() {
       return;
     }
 
-    if (
-      enteredUsername.toLowerCase() !== "admin" ||
-      enteredPassword !== "admin123"
-    ) {
-      setLoginError("Incorrect username or password.");
-      return;
-    }
+    try {
+      const response = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: enteredUsername,
+          password: enteredPassword,
+        }),
+      });
 
-    setLoginError("");
-    setIsLoggedIn(true);
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Incorrect username or password.");
+      }
+
+      localStorage.setItem(
+        "eazilyDoneAuth",
+        JSON.stringify({
+          username: data.username || enteredUsername,
+          loggedInAt: new Date().toISOString(),
+        }),
+      );
+
+      setLoginError("");
+      setIsLoggedIn(true);
+    } catch (error) {
+      setLoginError(error.message || "Unable to sign in right now. Please try again.");
+    }
   };
 
   if (!isLoggedIn) {
@@ -996,7 +1033,10 @@ function App() {
             </button>
             <button
               className="nav-btn"
-              onClick={() => setIsLoggedIn(false)}
+              onClick={() => {
+                localStorage.removeItem("eazilyDoneAuth");
+                setIsLoggedIn(false);
+              }}
               type="button"
             >
               Logout

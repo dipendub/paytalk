@@ -64,6 +64,11 @@ class Settings:
     def paypal_credentials_configured(self) -> bool:
         return bool(self.PAYPAL_CLIENT_ID and self.PAYPAL_CLIENT_SECRET)
 
+    def reload_dashboard_auth(self) -> None:
+        load_backend_env()
+        self.DASHBOARD_USERNAME = _clean_env(os.getenv("DASHBOARD_USERNAME"), self.DASHBOARD_USERNAME or "admin")
+        self.DASHBOARD_PASSWORD = _clean_env(os.getenv("DASHBOARD_PASSWORD"), self.DASHBOARD_PASSWORD or "admin123")
+
     def reload_paypal(self) -> None:
         load_backend_env()
         self.PAYPAL_CLIENT_ID = _clean_env(os.getenv("PAYPAL_CLIENT_ID"))
@@ -87,3 +92,4 @@ class Settings:
 
 settings = Settings()
 settings.reload_paypal()
+settings.reload_dashboard_auth()

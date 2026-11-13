@@ -100,6 +100,19 @@ class ChatbotChartTests(unittest.TestCase):
         self.assertIn("fraud_summary", payload)
         self.assertGreater(payload["fraud_summary"]["total_transactions"], 0)
 
+    def test_login_api_accepts_configured_dashboard_credentials(self):
+        client = TestClient(app)
+
+        response = client.post(
+            "/login",
+            json={"username": settings.DASHBOARD_USERNAME, "password": settings.DASHBOARD_PASSWORD},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "success")
+        self.assertEqual(payload["username"], settings.DASHBOARD_USERNAME)
+
     @patch("app.database.get_connection")
     def test_fetch_dashboard_data_normalizes_datetime_values(self, mock_get_connection):
         mock_conn = Mock()

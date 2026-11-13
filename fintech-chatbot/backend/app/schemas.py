@@ -7,6 +7,17 @@ class ChatRequest(BaseModel):
     question: str = Field(..., min_length=2, max_length=500)
 
 
+class LoginRequest(BaseModel):
+    username: str = Field(..., min_length=1, max_length=128)
+    password: str = Field(..., min_length=1, max_length=256)
+
+
+class LoginResponse(BaseModel):
+    status: str
+    username: str
+    message: str
+
+
 class ChartItem(BaseModel):
     label: str
     value: int

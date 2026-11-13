@@ -20,6 +20,8 @@ from .schemas import (
     ChatRequest,
     ChatResponse,
     DashboardResponse,
+    LoginRequest,
+    LoginResponse,
     PaymentCaptureRequest,
     PaymentCaptureResponse,
     PaymentOrderResponse,
@@ -869,6 +871,26 @@ app.add_middleware(
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": settings.APP_TITLE}
+
+
+@app.post("/login", response_model=LoginResponse)
+def login(payload: LoginRequest):
+    settings.reload_dashboard_auth()
+
+    username = (payload.username or "").strip()
+    password = payload.password or ""
+
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Username and password are required.")
+
+    if username.casefold() != settings.DASHBOARD_USERNAME.casefold() or password != settings.DASHBOARD_PASSWORD:
+        raise HTTPException(status_code=401, detail="Incorrect username or password.")
+
+    return LoginResponse(
+        status="success",
+        username=username,
+        message="Authentication successful.",
+    )
 
 
 @app.get("/questions")
