@@ -284,7 +284,7 @@ def create_paypal_checkout_order(amount: float, currency: str, description: str 
             "brand_name": settings.APP_TITLE,
             "user_action": "PAY_NOW",
             "return_url": f"{frontend_base}/payment/success",
-            "cancel_url": f"{frontend_base}/payment/cancel",
+            "cancel_url": f"{frontend_base}/payment/cancel?cancelled=true",
         },
     }
 
@@ -364,6 +364,11 @@ def capture_paypal_order(order_id: str) -> dict:
     )
 
     if response.status_code >= 400:
+        # PayPal returns an error when capture is retried after the order was already
+        # completed. A successful status lookup proves that replaying capture is safe.
+        status_payload = get_payment_status(order_id)
+        if str(status_payload.get("status") or "").upper() == "COMPLETED":
+            return status_payload.get("raw") or {"id": order_id, "status": "COMPLETED"}
         raise _paypal_http_error("capture", response)
 
     return response.json()
@@ -1244,6 +1249,38 @@ def capture_payment_order(payload: PaymentCaptureRequest):
                 "Verify the Sandbox order ID and the PayPal credentials before retrying."
             ),
         )
+
+
+@app.post("/paypal/cancel-order", response_model=dict)
+def cancel_paypal_order(payload: dict):
+    order_id = payload.get("order_id") or ""
+    if not order_id:
+        raise HTTPException(status_code=400, detail="Order ID is required for cancellation.")
+
+    token = get_paypal_access_token()
+    if not token:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "PayPal client credentials are missing. Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET "
+                "in backend/.env using Sandbox REST API values from the PayPal Developer Dashboard."
+            ),
+        )
+
+    response = httpx.post(
+        f"{settings.PAYPAL_BASE_URL.rstrip('/')}/v2/checkout/orders/{order_id}/cancel",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        timeout=20,
+        verify=_paypal_ssl_context(),
+    )
+
+    if response.status_code >= 400:
+        raise _paypal_http_error("order cancellation", response)
+
+    return {"status": "success", "order_id": order_id, "message": "Order cancellation requested."}
 
 
 if __name__ == "__main__":

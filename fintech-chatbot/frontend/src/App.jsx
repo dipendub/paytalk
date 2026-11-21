@@ -104,6 +104,151 @@ function LoginPage({ form, setForm, onSubmit, error }) {
   );
 }
 
+function PaymentCallbackPage() {
+  const [result, setResult] = useState("processing");
+  const [message, setMessage] = useState("Processing your PayPal response...");
+  const [orderId, setOrderId] = useState("");
+  const handledRef = useRef(false);
+
+  useEffect(() => {
+    if (handledRef.current) return;
+    handledRef.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    const pendingOrderId = sessionStorage.getItem("pendingPayPalOrderId");
+    const isCancelled =
+      window.location.pathname.includes("/payment/cancel") ||
+      params.get("cancelled") === "true";
+
+    if (isCancelled) {
+      setResult("cancelled");
+      setMessage("The PayPal payment was cancelled. No payment was captured.");
+      setOrderId(pendingOrderId || "");
+      sessionStorage.removeItem("pendingPayPalOrderId");
+      return;
+    }
+
+    const token = params.get("token");
+    const payerId = params.get("PayerID") || params.get("payerId") || "";
+
+    if (!token || !pendingOrderId) {
+      setResult("error");
+      setMessage(
+        "PayPal approval information was incomplete. Please create a new payment order.",
+      );
+      return;
+    }
+
+    const capturePayment = async () => {
+      setResult("processing");
+      setMessage(
+        "PayPal approved the payment. Capturing the order securely...",
+      );
+      setOrderId(pendingOrderId);
+
+      try {
+        const response = await fetch(`${API_URL}/payment/capture-order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            order_id: pendingOrderId,
+            payer_id: payerId,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(
+            data.detail || "Unable to capture the approved payment.",
+          );
+        }
+
+        if (data.captured) {
+          setResult("success");
+          setMessage(data.message || "Payment captured successfully.");
+        } else {
+          setResult("error");
+          setMessage(
+            data.message || "PayPal did not confirm the payment capture.",
+          );
+        }
+      } catch (error) {
+        setResult("error");
+        setMessage(error.message || "Payment capture failed.");
+      } finally {
+        sessionStorage.removeItem("pendingPayPalOrderId");
+      }
+    };
+
+    capturePayment();
+  }, []);
+
+  const icon =
+    result === "success"
+      ? "✓"
+      : result === "cancelled"
+        ? "×"
+        : result === "error"
+          ? "!"
+          : "•••";
+
+  return (
+    <div className="payment-callback-shell">
+      <div className={`payment-callback-card callback-${result}`}>
+        <div className="callback-icon" aria-hidden="true">
+          {icon}
+        </div>
+        <p className="eyebrow">
+          {result === "success"
+            ? "Payment successful"
+            : result === "cancelled"
+              ? "Payment cancelled"
+              : result === "error"
+                ? "Payment issue"
+                : "Confirming payment"}
+        </p>
+        <h1>
+          {result === "success"
+            ? "Thank you"
+            : result === "cancelled"
+              ? "You cancelled the payment"
+              : result === "error"
+                ? "We couldn’t complete it"
+                : "Please wait"}
+        </h1>
+        <p className="callback-message">{message}</p>
+        {orderId && <div className="callback-order">Order ID: {orderId}</div>}
+        {result !== "processing" && (
+          <button
+            type="button"
+            className="callback-return"
+            onClick={() => {
+              window.history.replaceState({}, document.title, "/");
+              window.location.reload();
+            }}
+          >
+            Return to Eazily Done
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function isPayPalCallbackLocation() {
+  const params = new URLSearchParams(window.location.search);
+  return (
+    window.location.pathname.includes("/payment/success") ||
+    window.location.pathname.includes("/payment/cancel") ||
+    Boolean(
+      params.get("token") ||
+      params.get("PayerID") ||
+      params.get("payerId") ||
+      params.get("cancelled"),
+    )
+  );
+}
+
 function PaymentPage() {
   const [recipientEmail, setRecipientEmail] = useState("deepsbiswa@yahoo.com");
   const [amount, setAmount] = useState("1.00");
@@ -112,49 +257,6 @@ function PaymentPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [approvalUrl, setApprovalUrl] = useState("");
   const [orderId, setOrderId] = useState("");
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    const payerId = params.get("PayerID") || params.get("payerId");
-    const pendingOrderId = sessionStorage.getItem("pendingPayPalOrderId");
-
-    if (!token || !pendingOrderId) {
-      return;
-    }
-
-    const completeCapturedPayment = async () => {
-      setStatus("PayPal approved the sandbox payment. Capturing the order...");
-
-      try {
-        const response = await fetch(`${API_URL}/payment/capture-order`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            order_id: pendingOrderId,
-            payer_id: payerId || "",
-          }),
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.detail || "Unable to capture the payment.");
-        }
-
-        setOrderId(pendingOrderId);
-        setStatus(data.message || "Payment capture status received.");
-        sessionStorage.removeItem("pendingPayPalOrderId");
-      } catch (error) {
-        setOrderId(pendingOrderId);
-        setStatus(error.message || "Payment capture failed.");
-        sessionStorage.removeItem("pendingPayPalOrderId");
-      }
-    };
-
-    completeCapturedPayment();
-  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -987,9 +1089,29 @@ function App() {
       setLoginError("");
       setIsLoggedIn(true);
     } catch (error) {
-      setLoginError(error.message || "Unable to sign in right now. Please try again.");
+      setLoginError(
+        error.message || "Unable to sign in right now. Please try again.",
+      );
     }
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pendingOrderId = sessionStorage.getItem("pendingPayPalOrderId");
+    const isPayPalCallback =
+      window.location.pathname.includes("/payment/") ||
+      Boolean(
+        params.get("token") || params.get("PayerID") || params.get("payerId"),
+      );
+
+    if (isPayPalCallback || pendingOrderId) {
+      setView("payment");
+    }
+  }, []);
+
+  if (isPayPalCallbackLocation()) {
+    return <PaymentCallbackPage />;
+  }
 
   if (!isLoggedIn) {
     return (

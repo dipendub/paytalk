@@ -56,7 +56,7 @@ class Settings:
     ]
     CORS_ORIGIN_REGEX: str = os.getenv(
         "CORS_ORIGIN_REGEX",
-        r"https?://([A-Za-z0-9-]+\.)*(localhost|127\.0\.0\.1|0\.0\.0\.0|daytona\.[A-Za-z0-9.-]+)(:\d+)?",
+        r"https?://([A-Za-z0-9-]+\.)*(localhost|127\.0\.0\.1|0\.0\.0\.0|daytona[A-Za-z0-9.-]*)(:\d+)?",
     )
     DASHBOARD_USERNAME: str = os.getenv("DASHBOARD_USERNAME", "admin").strip() or "admin"
     DASHBOARD_PASSWORD: str = os.getenv("DASHBOARD_PASSWORD", "admin123").strip() or "admin123"
@@ -88,6 +88,10 @@ class Settings:
         self.PAYPAL_LIVE_PAYOUTS_ENABLED = str(
             os.getenv("PAYPAL_LIVE_PAYOUTS_ENABLED", "false")
         ).strip().lower() == "true"
+        self.FRONTEND_BASE_URL = _clean_env(
+            os.getenv("FRONTEND_BASE_URL"),
+            self.FRONTEND_BASE_URL,
+        ).rstrip("/")
 
 
 settings = Settings()
